@@ -10,6 +10,7 @@ import uuid
 import logging
 
 from locust import HttpUser, task, between
+from locust.contrib.fasthttp import FastHttpUser
 from locust_plugins.users.playwright import PlaywrightUser, pw, PageWithRetry, event
 
 from opentelemetry import context, baggage, trace
@@ -38,39 +39,39 @@ from openfeature.contrib.hook.opentelemetry import TracingHook
 
 from playwright.async_api import Route, Request
 
-# Configure tracer provider first (needed for trace context in logs)
-tracer_provider = TracerProvider()
-trace.set_tracer_provider(tracer_provider)
-tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(insecure=True)))
+# # Configure tracer provider first (needed for trace context in logs)
+# tracer_provider = TracerProvider()
+# trace.set_tracer_provider(tracer_provider)
+# tracer_provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter(insecure=True)))
 
-# Configure logger provider with the same resource
-logger_provider = LoggerProvider()
-set_logger_provider(logger_provider)
+# # Configure logger provider with the same resource
+# logger_provider = LoggerProvider()
+# set_logger_provider(logger_provider)
 
-# Set up log exporter and processor
-log_exporter = OTLPLogExporter(insecure=True)
-logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+# # Set up log exporter and processor
+# log_exporter = OTLPLogExporter(insecure=True)
+# logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
 
-# Create logging handler that will include trace context
-handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
+# # Create logging handler that will include trace context
+# handler = LoggingHandler(level=logging.INFO, logger_provider=logger_provider)
 
-# Configure root logger
-root_logger = logging.getLogger()
-root_logger.addHandler(handler)
-root_logger.setLevel(logging.INFO)
+# # Configure root logger
+# root_logger = logging.getLogger()
+# root_logger.addHandler(handler)
+# root_logger.setLevel(logging.INFO)
 
-# Configure metrics
-metric_exporter = OTLPMetricExporter(insecure=True)
-set_meter_provider(MeterProvider([PeriodicExportingMetricReader(metric_exporter)]))
+# # Configure metrics
+# metric_exporter = OTLPMetricExporter(insecure=True)
+# set_meter_provider(MeterProvider([PeriodicExportingMetricReader(metric_exporter)]))
 
-# Instrument logging to automatically inject trace context
-LoggingInstrumentor().instrument(set_logging_format=True)
+# # Instrument logging to automatically inject trace context
+# LoggingInstrumentor().instrument(set_logging_format=True)
 
-# Instrumenting manually to avoid error with locust gevent monkey
-Jinja2Instrumentor().instrument()
-RequestsInstrumentor().instrument()
-SystemMetricsInstrumentor().instrument()
-URLLib3Instrumentor().instrument()
+# # Instrumenting manually to avoid error with locust gevent monkey
+# Jinja2Instrumentor().instrument()
+# RequestsInstrumentor().instrument()
+# SystemMetricsInstrumentor().instrument()
+# URLLib3Instrumentor().instrument()
 
 logging.info("Instrumentation complete - logs will now include trace context")
 
@@ -110,7 +111,7 @@ products = [
 people_file = open('people.json')
 people = json.load(people_file)
 
-class WebsiteUser(HttpUser):
+class WebsiteUser(FastHttpUser):
     wait_time = between(1, 10)
 
     def __init__(self, *args, **kwargs):
@@ -128,7 +129,7 @@ class WebsiteUser(HttpUser):
         product = random.choice(products)
         with self.tracer.start_as_current_span("user_browse_product", context=Context(), attributes={"product.id": product}):
             logging.info(f"User browsing product: {product}")
-            self.client.get("/api/products/" + product)
+            self.client.get("/api/products/" + product, name="/api/products/[id]")
 
     @task(3)
     def get_recommendations(self):
@@ -145,7 +146,7 @@ class WebsiteUser(HttpUser):
         product = random.choice(products)
         with self.tracer.start_as_current_span("user_get_product_reviews", context=Context(), attributes={"product.id": product}):
             logging.info(f"User getting product reviews for product: {product}")
-            self.client.get("/api/product-reviews/" + product)
+            self.client.get("/api/product-reviews/" + product, name="/api/product-reviews/[id]")
 
     @task(1)
     def ask_product_ai_assistant(self):
@@ -156,7 +157,7 @@ class WebsiteUser(HttpUser):
             question = {
                 "question": question
             }
-            self.client.post("/api/product-ask-ai-assistant/" + product, json=question)
+            self.client.post("/api/product-ask-ai-assistant/" + product, json=question, name="/api/product-ask-ai-assistant/[id]")
 
     @task(3)
     def get_ads(self):
@@ -182,7 +183,7 @@ class WebsiteUser(HttpUser):
         quantity = random.choice([1, 2, 3, 4, 5, 10])
         with self.tracer.start_as_current_span("user_add_to_cart", context=Context(), attributes={"user.id": user, "product.id": product, "quantity": quantity}):
             logging.info(f"User {user} adding {quantity} of product {product} to cart")
-            self.client.get("/api/products/" + product)
+            self.client.get("/api/products/" + product, name="/api/products/[id]")
             cart_item = {
                 "item": {
                     "productId": product,
