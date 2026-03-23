@@ -42,8 +42,8 @@ logging.basicConfig(level=logging.INFO)
 logging.info("gRPC load generator initialized")
 
 
-def _normalize_grpc_target(value: str, fallback: str) -> str:
-    target = (value or fallback).strip()
+def _normalize_grpc_target(value: str) -> str:
+    target = value.strip()
     if target.startswith("http://"):
         target = target[len("http://"):]
     elif target.startswith("https://"):
