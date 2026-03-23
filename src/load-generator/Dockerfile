@@ -18,5 +18,8 @@ COPY --from=builder /reqs /usr/local
 ENV PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
 RUN playwright install --with-deps chromium
 COPY ./src/load-generator/locustfile.py .
+COPY ./src/load-generator/locustfile-grpc.py .
 COPY ./src/load-generator/people.json .
+COPY ./src/recommendation/demo_pb2.py .
+COPY ./src/recommendation/demo_pb2_grpc.py .
 ENTRYPOINT ["locust", "--skip-log-setup"]
