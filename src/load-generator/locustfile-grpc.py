@@ -95,15 +95,15 @@ class WebsiteGrpcUser(User):
 
     def _build_channels_and_stubs(self):
         product_catalog_addr = _normalize_grpc_target(
-            os.environ.get("PRODUCT_CATALOG_ADDR"), "product-catalog:3550"
+            os.environ["PRODUCT_CATALOG_ADDR"]
         )
         recommendation_addr = _normalize_grpc_target(
-            os.environ.get("RECOMMENDATION_ADDR"), "recommendation:9001"
+            os.environ["RECOMMENDATION_ADDR"]
         )
-        ad_addr = _normalize_grpc_target(os.environ.get("AD_ADDR"), "ad:9555")
-        cart_addr = _normalize_grpc_target(os.environ.get("CART_ADDR"), "cart:7070")
+        ad_addr = _normalize_grpc_target(os.environ["AD_ADDR"])
+        cart_addr = _normalize_grpc_target(os.environ["CART_ADDR"])
         checkout_addr = _normalize_grpc_target(
-            os.environ.get("CHECKOUT_ADDR"), "checkout:5050"
+            os.environ["CHECKOUT_ADDR"]
         )
 
         self.catalog_channel = grpc.insecure_channel(product_catalog_addr)
