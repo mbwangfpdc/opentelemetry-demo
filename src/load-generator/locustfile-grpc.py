@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import random
+import sys
 import time
 import uuid
 
@@ -20,8 +21,21 @@ from openfeature import api
 from openfeature.contrib.hook.opentelemetry import TracingHook
 from openfeature.contrib.provider.ofrep import OFREPProvider
 
-import demo_pb2
-import demo_pb2_grpc
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+RECOMMENDATION_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "recommendation"))
+
+for path in (BASE_DIR, RECOMMENDATION_DIR):
+    if os.path.isdir(path) and path not in sys.path:
+        sys.path.insert(0, path)
+
+try:
+    import demo_pb2
+    import demo_pb2_grpc
+except ModuleNotFoundError as exc:
+    raise ModuleNotFoundError(
+        "Could not import demo_pb2/demo_pb2_grpc. Generate protobuf stubs in "
+        "src/recommendation or ensure PYTHONPATH includes src/recommendation."
+    ) from exc
 
 
 logging.basicConfig(level=logging.INFO)
@@ -38,7 +52,8 @@ def _normalize_grpc_target(value: str, fallback: str) -> str:
 
 
 def _load_people() -> list[dict]:
-    with open("people.json", encoding="utf-8") as people_file:
+    people_path = os.path.join(BASE_DIR, "people.json")
+    with open(people_path, encoding="utf-8") as people_file:
         return json.load(people_file)
 
 
