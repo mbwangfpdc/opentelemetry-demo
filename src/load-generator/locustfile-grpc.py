@@ -21,12 +21,21 @@ from openfeature import api
 from openfeature.contrib.hook.opentelemetry import TracingHook
 from openfeature.contrib.provider.ofrep import OFREPProvider
 
-try:
-    import grpc.experimental.gevent as grpc_gevent
 
-    grpc_gevent.init_gevent()
-except Exception as exc:  # noqa: BLE001
-    logging.warning("Unable to initialize grpc gevent integration: %s", exc)
+def _env_bool(name: str, default: bool = False) -> bool:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+if _env_bool("USE_GRPC_GEVENT", default=False):
+    try:
+        import grpc.experimental.gevent as grpc_gevent
+
+        grpc_gevent.init_gevent()
+    except Exception as exc:  # noqa: BLE001
+        logging.warning("Unable to initialize grpc gevent integration: %s", exc)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RECOMMENDATION_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "recommendation"))
