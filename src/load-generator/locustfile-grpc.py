@@ -174,13 +174,13 @@ class WebsiteGrpcUser(User):
             exception = exc
             logging.error("Unexpected error for %s: %s", name, exc)
         finally:
-            # NOTE: We report the response time in microseconds to have more granularity for gRPC calls
+            # NOTE: We report the response time in nanoseconds to measure more granularly
             # The UI will say milliseconds. It's wrong!!!
-            elapsed_micros = (time.perf_counter() - start_time) * 1_000_000
+            elapsed_nanos = (time.perf_counter() - start_time) * 1_000_000_000
             events.request.fire(
                 request_type="grpc",
                 name=name,
-                response_time=elapsed_micros,
+                response_time=elapsed_nanos,
                 response_length=response_length,
                 response=response,
                 context={},
@@ -232,7 +232,7 @@ class WebsiteGrpcUser(User):
             demo_pb2.AdRequest(context_keys=context_keys),
         )
 
-    @task(5)
+    @task(3)
     def view_cart(self):
         logging.info("User viewing cart via gRPC")
         self._grpc_unary(
