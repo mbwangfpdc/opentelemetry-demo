@@ -165,11 +165,13 @@ class WebsiteGrpcUser(User):
             exception = exc
             logging.error("Unexpected error for %s: %s", name, exc)
         finally:
-            elapsed_ms = (time.perf_counter() - start_time) * 1000
+            # NOTE: We report the response time in microseconds to have more granularity for gRPC calls
+            # The UI will say milliseconds. It's wrong!!!
+            elapsed_micros = (time.perf_counter() - start_time) * 1_000_000
             events.request.fire(
                 request_type="grpc",
                 name=name,
-                response_time=elapsed_ms,
+                response_time=elapsed_micros,
                 response_length=response_length,
                 response=response,
                 context={},
