@@ -178,7 +178,7 @@ class WebsiteGrpcUser(User):
 
         return response
 
-    @task(1)
+    @task(0)
     def index(self):
         logging.info("User listing products via gRPC")
         self._grpc_unary(
@@ -187,7 +187,7 @@ class WebsiteGrpcUser(User):
             demo_pb2.Empty(),
         )
 
-    @task(10)
+    @task(0)
     def browse_product(self):
         product = random.choice(products)
         logging.info("User browsing product via gRPC: %s", product)
@@ -197,7 +197,7 @@ class WebsiteGrpcUser(User):
             demo_pb2.GetProductRequest(id=product),
         )
 
-    @task(3)
+    @task(0)
     def get_recommendations(self):
         product = random.choice(products)
         logging.info("User getting recommendations via gRPC for product: %s", product)
@@ -210,7 +210,7 @@ class WebsiteGrpcUser(User):
             ),
         )
 
-    @task(3)
+    @task(0)
     def get_ads(self):
         category = random.choice(categories)
         logging.info("User getting ads via gRPC for category: %s", category)
@@ -221,7 +221,7 @@ class WebsiteGrpcUser(User):
             demo_pb2.AdRequest(context_keys=context_keys),
         )
 
-    @task(3)
+    @task(5)
     def view_cart(self):
         logging.info("User viewing cart via gRPC")
         self._grpc_unary(
@@ -237,11 +237,6 @@ class WebsiteGrpcUser(User):
         quantity = random.choice([1, 2, 3, 4, 5, 10])
         logging.info("User %s adding %s of product %s via gRPC", user_id, quantity, product)
 
-        self._grpc_unary(
-            "ProductCatalog/GetProduct",
-            self.product_catalog_stub.GetProduct,
-            demo_pb2.GetProductRequest(id=product),
-        )
         self._grpc_unary(
             "Cart/AddItem",
             self.cart_stub.AddItem,
@@ -295,7 +290,7 @@ class WebsiteGrpcUser(User):
         self._place_order(user)
         logging.info("Multi-item checkout completed via gRPC for user %s", user)
 
-    @task(5)
+    @task(0)
     def flood_home(self):
         flood_count = get_flagd_value("loadGeneratorFloodHomepage")
         if flood_count > 0:
@@ -318,7 +313,7 @@ class WebsiteGrpcUser(User):
         context.attach(ctx)
 
         logging.info("Starting gRPC user session: %s", self.session_id)
-        self.index()
+        self.view_cart()
 
     def on_stop(self):
         for channel in (
