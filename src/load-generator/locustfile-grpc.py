@@ -75,23 +75,23 @@ except ModuleNotFoundError as exc:
 logging.basicConfig(level=logging.INFO)
 logging.info("gRPC load generator initialized")
 
-GRPC_WARMUP_SECONDS = _env_seconds("GRPC_WARMUP", default=0.0)
+LOCUST_WARMUP_SECONDS = _env_seconds("LOCUST_WARMUP", default=0.0)
 
 
 @events.test_start.add_listener
 def _schedule_stats_reset_after_warmup(environment, **kwargs):
     del kwargs
-    if GRPC_WARMUP_SECONDS <= 0:
+    if LOCUST_WARMUP_SECONDS <= 0:
         return
 
     def _reset_stats():
         environment.stats.reset_all()
-        logging.info("Locust stats reset after GRPC_WARMUP=%s seconds", GRPC_WARMUP_SECONDS)
+        logging.info("Locust stats reset after LOCUST_WARMUP=%s seconds", LOCUST_WARMUP_SECONDS)
 
     import gevent
 
-    gevent.spawn_later(GRPC_WARMUP_SECONDS, _reset_stats)
-    logging.info("GRPC_WARMUP enabled: stats will reset after %s seconds", GRPC_WARMUP_SECONDS)
+    gevent.spawn_later(LOCUST_WARMUP_SECONDS, _reset_stats)
+    logging.info("LOCUST_WARMUP enabled: stats will reset after %s seconds", LOCUST_WARMUP_SECONDS)
 
 
 def _normalize_grpc_target(value: str) -> str:

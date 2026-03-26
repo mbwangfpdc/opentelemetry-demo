@@ -9,7 +9,7 @@ import random
 import uuid
 import logging
 
-from locust import HttpUser, task, between
+from locust import HttpUser, events, task, between
 from locust.contrib.fasthttp import FastHttpUser
 from locust_plugins.users.playwright import PlaywrightUser, pw, PageWithRetry, event
 
@@ -74,6 +74,42 @@ from playwright.async_api import Route, Request
 # URLLib3Instrumentor().instrument()
 
 logging.info("Instrumentation complete - logs will now include trace context")
+
+
+def _env_seconds(name: str, default: float = 0.0) -> float:
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    try:
+        seconds = float(value)
+    except ValueError:
+        logging.warning("Invalid %s value %r; using default %s", name, value, default)
+        return default
+
+    if seconds < 0:
+        logging.warning("Negative %s value %s is not allowed; using default %s", name, seconds, default)
+        return default
+
+    return seconds
+
+
+LOCUST_WARMUP_SECONDS = _env_seconds("LOCUST_WARMUP", default=0.0)
+
+
+@events.test_start.add_listener
+def _schedule_stats_reset_after_warmup(environment, **kwargs):
+    del kwargs
+    if LOCUST_WARMUP_SECONDS <= 0:
+        return
+
+    def _reset_stats():
+        environment.stats.reset_all()
+        logging.info("Locust stats reset after LOCUST_WARMUP=%s seconds", LOCUST_WARMUP_SECONDS)
+
+    import gevent
+
+    gevent.spawn_later(LOCUST_WARMUP_SECONDS, _reset_stats)
+    logging.info("LOCUST_WARMUP enabled: stats will reset after %s seconds", LOCUST_WARMUP_SECONDS)
 
 # Initialize Flagd provider
 base_url = f"http://{os.environ.get('FLAGD_HOST', 'localhost')}:{os.environ.get('FLAGD_OFREP_PORT', 8016)}"
