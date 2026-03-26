@@ -22,20 +22,38 @@ from openfeature.contrib.hook.opentelemetry import TracingHook
 from openfeature.contrib.provider.ofrep import OFREPProvider
 
 
-def _env_bool(name: str, default: bool = False) -> bool:
+def _env_seconds(name: str, default: float = 0.0) -> float:
     value = os.environ.get(name)
     if value is None:
         return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
-
-
-if _env_bool("USE_GRPC_GEVENT", default=False):
     try:
-        import grpc.experimental.gevent as grpc_gevent
+        seconds = float(value)
+    except ValueError:
+        logging.warning("Invalid %s value %r; using default %s", name, value, default)
+        return default
 
-        grpc_gevent.init_gevent()
-    except Exception as exc:  # noqa: BLE001
-        logging.warning("Unable to initialize grpc gevent integration: %s", exc)
+    if seconds < 0:
+        logging.warning("Negative %s value %s is not allowed; using default %s", name, seconds, default)
+        return default
+
+    return seconds
+
+
+try:
+    import grpc.experimental.gevent as grpc_gevent
+except Exception as exc:  # noqa: BLE001
+    raise RuntimeError(
+        "grpc gevent integration is required for this load generator, "
+        "but grpc.experimental.gevent could not be imported."
+    ) from exc
+
+try:
+    grpc_gevent.init_gevent()
+except Exception as exc:  # noqa: BLE001
+    raise RuntimeError(
+        "grpc gevent integration is required for this load generator, "
+        "but grpc_gevent.init_gevent() failed."
+    ) from exc
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RECOMMENDATION_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "recommendation"))
@@ -56,6 +74,24 @@ except ModuleNotFoundError as exc:
 
 logging.basicConfig(level=logging.INFO)
 logging.info("gRPC load generator initialized")
+
+GRPC_WARMUP_SECONDS = _env_seconds("GRPC_WARMUP", default=0.0)
+
+
+@events.test_start.add_listener
+def _schedule_stats_reset_after_warmup(environment, **kwargs):
+    del kwargs
+    if GRPC_WARMUP_SECONDS <= 0:
+        return
+
+    def _reset_stats():
+        environment.stats.reset_all()
+        logging.info("Locust stats reset after GRPC_WARMUP=%s seconds", GRPC_WARMUP_SECONDS)
+
+    import gevent
+
+    gevent.spawn_later(GRPC_WARMUP_SECONDS, _reset_stats)
+    logging.info("GRPC_WARMUP enabled: stats will reset after %s seconds", GRPC_WARMUP_SECONDS)
 
 
 def _normalize_grpc_target(value: str) -> str:
