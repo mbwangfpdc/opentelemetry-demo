@@ -268,7 +268,7 @@ class WebsiteGrpcUser(User):
             demo_pb2.AdRequest(context_keys=context_keys),
         )
 
-    @task(3)
+    @task(4)
     def view_cart(self):
         logging.info("User viewing cart via gRPC")
         self._grpc_unary(
@@ -321,14 +321,14 @@ class WebsiteGrpcUser(User):
             ),
         )
 
-    @task(1)
+    @task(0)
     def checkout(self):
         user = str(uuid.uuid1())
         self.add_to_cart(user=user)
         self._place_order(user)
         logging.info("Checkout completed via gRPC for user %s", user)
 
-    @task(1)
+    @task(0)
     def checkout_multi(self):
         user = str(uuid.uuid1())
         item_count = random.choice([2, 3, 4])
